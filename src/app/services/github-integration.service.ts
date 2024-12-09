@@ -59,7 +59,7 @@ export class GitHubIntegrationService {
 
       this._integrationStatus.set(status);
     } catch (error) {
-      this._error.set('You are not authenticated!');
+      this._error.set('  You are not authenticated!');
     } finally {
       this._loading.set(false);
     }
