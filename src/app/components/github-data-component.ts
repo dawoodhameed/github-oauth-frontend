@@ -141,7 +141,7 @@ import {
             }
           </div>
 
-          <!-- AG Grid -->
+          <!-- AG Grid for Collection Data -->
           <ag-grid-angular
             class="ag-theme-alpine"
             [rowData]="gridData"
@@ -155,9 +155,21 @@ import {
             (rowDragEnd)="onRowDragEnd($event)"
             style="height: 500px; width: 100%;"
           ></ag-grid-angular>
-          <mat-menu #cellMenu="matMenu">
-            <button mat-menu-item>{{ clickedCellData | json }}</button>
-          </mat-menu>
+
+          <!-- AG Grid for Search Results -->
+          @if (service.searchResults()) {
+            <div *ngFor="let result of searchResults">
+              <h3>{{ result.collectionName }}</h3>
+              <ag-grid-angular
+                class="ag-theme-alpine"
+                [rowData]="result.data"
+                [columnDefs]="generateColumnDefinitions(result.data[0])"
+                [defaultColDef]="defaultColumnDefinition"
+                style="height: 500px; width: 100%;"
+              ></ag-grid-angular>
+            </div>
+          }
+
           <!-- Pagination -->
           <div class="pagination">
             <button 
@@ -223,6 +235,7 @@ export class GitHubDataGridComponent implements OnInit {
   pageSize: number = 100;
   totalPages: number = 0;
   clickedCellData: any;
+  searchResults: { collectionName: string; data: any[] }[] = [];
   
   // Filtering
   dateRange = { start: undefined, end: undefined };
@@ -259,6 +272,7 @@ export class GitHubDataGridComponent implements OnInit {
   }
 
   loadCollectionData() {
+    this.searchTerm = ''; // Clear the search input
     this.service.fetchCollectionData(
       this.selectedCollection,
       this.currentPage,
@@ -285,12 +299,21 @@ export class GitHubDataGridComponent implements OnInit {
 
   onCollectionChange() {
     this.currentPage = 1;
+    this.searchResults = [];
     this.loadCollectionData();
   }
 
   onSearchChange() {
     this.currentPage = 1;
-    this.loadCollectionData();
+    this.service.searchAcrossAllCollections(this.searchTerm).then(() => {
+      const results = this.service.searchResults();
+      if (results) {
+        this.searchResults = Object.keys(results).map(key => ({
+          collectionName: key.charAt(0).toUpperCase() + key.slice(1),
+          data: results[key]
+        }));
+      }
+    });
   }
 
   applyFilters() {
@@ -339,7 +362,7 @@ export class GitHubDataGridComponent implements OnInit {
   };
 
   // Column generation with nested object support
-  private generateColumnDefinitions(dataObject: any): ColDef[] {
+  public generateColumnDefinitions(dataObject: any): ColDef[] {
     const flattenObject = (obj: any, prefix = ''): ColDef[] => {
       return Object.keys(obj).flatMap((key) => {
         const path = prefix ? `${prefix}.${key}` : key;

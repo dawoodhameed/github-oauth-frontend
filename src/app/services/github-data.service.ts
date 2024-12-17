@@ -29,6 +29,10 @@ export interface FilterOptions {
   searchTerm?: string;
 }
 
+export interface SearchResult {
+  [collectionName: string]: any[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -44,6 +48,7 @@ export class GitHubDataGridService {
   private _loading = signal<boolean>(false);
   private _error = signal<string | null>(null);
   private _facets = signal<Record<string, FacetItem[]>>({});
+  private _searchResults = signal<SearchResult | null>(null);
 
   // Readonly signals for components to consume
   public collections = this._collections.asReadonly();
@@ -51,6 +56,7 @@ export class GitHubDataGridService {
   public loading = this._loading.asReadonly();
   public error = this._error.asReadonly();
   public facets = this._facets.asReadonly();
+  public searchResults = this._searchResults.asReadonly();
 
   constructor(private http: HttpClient) {}
 
@@ -97,7 +103,7 @@ export class GitHubDataGridService {
         collectionName,
         page,
         pageSize,
-        searchTerm,
+        //searchTerm,
         filters: selectedFacets,
         dateRange: dateRange
           ? {
@@ -134,33 +140,34 @@ export class GitHubDataGridService {
   }
 
   /**
-   * Global search across all collections
+   * Search across all collections
    */
-  async searchAcrossCollections(
-    searchTerm: string,
-    page: number = 1,
-    pageSize: number = 100
-  ): Promise<void> {
+  async searchAcrossAllCollections(searchTerm: string): Promise<void> {
     this._loading.set(true);
     this._error.set(null);
+    this._searchResults.set(null);
+    this._currentCollectionData.set({
+      data: [],
+      total: 0,
+      page: 1,
+      pageSize: 100,
+    });
 
     try {
       const result = await firstValueFrom(
-        this.http.post<DataGridResult>(
-          `${environment.apiUrl}/global-search`,
-          { searchTerm, page, pageSize },
-          { withCredentials: true }
+        this.http.get<SearchResult>(
+          `${environment.apiUrl}/search`,
+          {
+            params: new HttpParams().set('keyword', searchTerm),
+            withCredentials: true,
+          }
         )
       );
 
-      this._currentCollectionData.set(result);
-
-      // Update facets if provided
-      if (result.facets) {
-        this._facets.set(result.facets);
-      }
+      this._searchResults.set(result);
+      console.log('Search Results:', result);
     } catch (error) {
-      this.handleError('Global search failed', error);
+      this.handleError('Search across collections failed', error);
     } finally {
       this._loading.set(false);
     }
