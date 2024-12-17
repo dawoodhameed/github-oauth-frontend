@@ -94,7 +94,7 @@ import {
                 matInput 
                 placeholder="Global Search" 
                 [(ngModel)]="searchTerm" 
-                (input)="onSearchChange()"
+                (keyup.enter)="onSearchChange()"
               >
               <mat-icon matSuffix>search</mat-icon>
             </mat-form-field>
