@@ -250,8 +250,6 @@ export class GitHubDataGridComponent implements OnInit {
     resizable: true,
     sortable: true,
     filter: true,
-    cellRenderer: 'agGroupCellRenderer',
-    rowDrag: true,
   };
 
   // Grid API References
@@ -364,20 +362,28 @@ export class GitHubDataGridComponent implements OnInit {
   // Column generation with nested object support
   public generateColumnDefinitions(dataObject: any): ColDef[] {
     const flattenObject = (obj: any, prefix = ''): ColDef[] => {
-      return Object.keys(obj).flatMap((key) => {
+      return Object.keys(obj).flatMap((key, index) => {
         const path = prefix ? `${prefix}.${key}` : key;
 
         if (typeof obj[key] === 'object' && obj[key] !== null) {
           return flattenObject(obj[key], path);
         }
 
-        return [{
+        const colDef: ColDef = {
           headerName: this.formatHeaderName(path),
           field: path,
           sortable: true,
           filter: true,
           resizable: true,
-        }];
+        };
+
+        // Add cellRenderer and rowDrag only to the first column
+        if (index === 0) {
+          colDef.cellRenderer = 'agGroupCellRenderer';
+          colDef.rowDrag = true;
+        }
+
+        return [colDef];
       });
     };
 
