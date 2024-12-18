@@ -33,6 +33,14 @@ export interface SearchResult {
   [collectionName: string]: any[];
 }
 
+export interface IssueDetailsResponse {
+  issueDetails: any;
+  issueComments: any[];
+  issueEvents: any[];
+  issueTimelines: any[];
+  relatedPRs: any[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -49,6 +57,9 @@ export class GitHubDataGridService {
   private _error = signal<string | null>(null);
   private _facets = signal<Record<string, FacetItem[]>>({});
   private _searchResults = signal<SearchResult | null>(null);
+  private _relatedData = signal<any[]>([]);
+  private _relatedDataFields = signal<string[]>([]);
+  private _issueDetails = signal<IssueDetailsResponse | null>(null);
 
   // Readonly signals for components to consume
   public collections = this._collections.asReadonly();
@@ -57,6 +68,9 @@ export class GitHubDataGridService {
   public error = this._error.asReadonly();
   public facets = this._facets.asReadonly();
   public searchResults = this._searchResults.asReadonly();
+  public relatedData = this._relatedData.asReadonly();
+  public relatedDataFields = this._relatedDataFields.asReadonly();
+  public issueDetails = this._issueDetails.asReadonly();
 
   constructor(private http: HttpClient) {}
 
@@ -194,6 +208,59 @@ export class GitHubDataGridService {
     } catch (error) {
       this.handleError('Failed to fetch item relationships', error);
       throw error;
+    } finally {
+      this._loading.set(false);
+    }
+  }
+
+  /**
+   * Fetch related data for a specific user
+   */
+  async fetchRelatedDataForUser(userId: string): Promise<void> {
+    this._loading.set(true);
+    this._error.set(null);
+
+    try {
+      const result = await firstValueFrom(
+        this.http.get<{ allFields: string[], results: any[] }>(
+          `http://localhost:3000/related-data-user`,
+          {
+            params: new HttpParams().set('userId', userId),
+            withCredentials: true,
+          }
+        )
+      );
+
+      this._relatedData.set(result.results);
+      this._relatedDataFields.set(result.allFields);
+      console.log('Fetched Related Data:', result);
+    } catch (error) {
+      this.handleError('Failed to fetch related data for user', error);
+    } finally {
+      this._loading.set(false);
+    }
+  }
+
+  /**
+   * Fetch issue details
+   */
+  async fetchIssueDetails(issueNumber: string, repo: string, owner: string): Promise<void> {
+    this._loading.set(true);
+    this._error.set(null);
+
+    try {
+      const result = await firstValueFrom(
+        this.http.post<IssueDetailsResponse>(
+          `http://localhost:3000/issue-details`,
+          { issueNumber, repo, owner },
+          { withCredentials: true }
+        )
+      );
+
+      this._issueDetails.set(result);
+      console.log('Fetched Issue Details:', result);
+    } catch (error) {
+      this.handleError('Failed to fetch issue details', error);
     } finally {
       this._loading.set(false);
     }

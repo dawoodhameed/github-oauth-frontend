@@ -156,6 +156,18 @@ import {
             style="height: 500px; width: 100%;"
           ></ag-grid-angular>
 
+          <!-- AG Grid for Related Data -->
+          @if (service.relatedData().length > 0) {
+            <h3>Related Data</h3>
+            <ag-grid-angular
+              class="ag-theme-alpine"
+              [rowData]="service.relatedData()"
+              [columnDefs]="generateColumnDefinitionsFromFields(service.relatedDataFields())"
+              [defaultColDef]="defaultColumnDefinition"
+              style="height: 500px; width: 100%;"
+            ></ag-grid-angular>
+          }
+
           <!-- AG Grid for Search Results -->
           @if (service.searchResults()) {
             <div *ngFor="let result of searchResults">
@@ -343,6 +355,11 @@ export class GitHubDataGridComponent implements OnInit {
     // Implement cell click logic, e.g., show details
     console.log('Cell clicked', event);
     this.clickedCellData = event.data;
+
+    if (event.colDef.field === 'user_id') {
+      this.service.fetchRelatedDataForUser(event.value);
+    }
+
     this.snackBar.openFromComponent(MatMenuModule, {
       data: { menu: 'cellMenu' },
       duration: 2000,
@@ -383,11 +400,45 @@ export class GitHubDataGridComponent implements OnInit {
           colDef.rowDrag = true;
         }
 
+        // Add hyperlink renderer for user_id field
+        if (path === 'user_id') {
+          colDef.cellRenderer = (params: any) => {
+            const link = document.createElement('a');
+            link.href = '#';
+            link.innerText = params.value;
+            link.onclick = (e: Event) => {
+              e.preventDefault();
+              this.service.fetchRelatedDataForUser(params.value);
+            };
+            return link;
+          };
+        }
+
         return [colDef];
       });
     };
 
     return flattenObject(dataObject);
+  }
+
+  public generateColumnDefinitionsFromFields(fields: string[]): ColDef[] {
+    return fields.map((field, index) => {
+      const colDef: ColDef = {
+        headerName: this.formatHeaderName(field),
+        field: field,
+        sortable: true,
+        filter: true,
+        resizable: true,
+      };
+
+      // Add cellRenderer and rowDrag only to the first column
+      if (index === 0) {
+        colDef.cellRenderer = 'agGroupCellRenderer';
+        colDef.rowDrag = true;
+      }
+
+      return colDef;
+    });
   }
 
   // Utility method to format header names
