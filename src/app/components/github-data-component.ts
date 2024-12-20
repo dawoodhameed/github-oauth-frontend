@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 // Angular Material Imports
 import { MatCardModule } from '@angular/material/card';
@@ -239,6 +240,7 @@ export class GitHubDataGridComponent implements OnInit {
   // Service Injections
   service = inject(GitHubDataGridService);
   private snackBar = inject(MatSnackBar);
+  private readonly router = inject(Router);
 
   // Component State
   selectedCollection: string = '';
@@ -414,6 +416,21 @@ export class GitHubDataGridComponent implements OnInit {
           };
         }
 
+        // Add hyperlink renderer for number field in issues collection
+        if (path === 'number' && this.selectedCollection === 'issues') {
+          colDef.cellRenderer = (params: any) => {
+            console.log("params", params)
+            const link = document.createElement('a');
+            link.href = 'javascript:void(0)';
+            link.innerText = params.value;
+            link.onclick = (e: Event) => {
+              e.preventDefault();
+              this.redirectToIssueDetails(params.value, params.data.repo_id.split('/')[0], params.data.repo_id.split('/')[1 ]);
+            };
+            return link;
+          };
+        }
+
         return [colDef];
       });
     };
@@ -460,5 +477,11 @@ export class GitHubDataGridComponent implements OnInit {
     this.gridData.splice(toIndex, 0, movingData);
 
     this.gridApi.applyTransaction({ update: this.gridData });
+  }
+
+  redirectToIssueDetails(issueNumber: string, org: string, repoName: string) {
+    this.router.navigate(['/github-issue-details'], {
+      queryParams: { issueNumber, org, repoName },
+    });
   }
 }

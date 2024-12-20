@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { GitHubDataGridService } from '../services/github-data.service';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-issue-details',
@@ -32,7 +33,7 @@ import { GitHubDataGridService } from '../services/github-data.service';
         <p><strong>Comments:</strong> {{ service.issueDetails()?.issueDetails?.comments }}</p>
       </mat-card-content>
       <mat-card-actions>
-        <button mat-button (click)="loadIssueDetails()">Reload</button>
+        <button mat-button (click)="reloadIssueDetails()">Reload</button>
       </mat-card-actions>
     </mat-card>
 
@@ -93,12 +94,29 @@ import { GitHubDataGridService } from '../services/github-data.service';
 })
 export class IssueDetailsComponent implements OnInit {
   service = inject(GitHubDataGridService);
+  private readonly route = inject(ActivatedRoute);
 
   ngOnInit() {
-    this.loadIssueDetails();
+    this.route.queryParams.subscribe(params => {
+      const issueNumber = params['issueNumber'];
+      const repo = params['repoName'];
+      const owner = params['org'];
+      if (issueNumber && repo && owner) {
+        this.loadIssueDetails(issueNumber, repo, owner);
+      }
+    });
   }
 
-  loadIssueDetails() {
-    this.service.fetchIssueDetails('2', 'explore', 'dawoodtest0306');
+  reloadIssueDetails() {
+    const issueNumber = this.route.snapshot.queryParamMap.get('issueNumber');
+    const repo = this.route.snapshot.queryParamMap.get('repoName');
+    const owner = this.route.snapshot.queryParamMap.get('org');
+    if (issueNumber && repo && owner) {
+      this.loadIssueDetails(issueNumber, repo, owner);
+    }
+  }
+
+  loadIssueDetails(issueNumber: string, repo: string, owner: string) {
+    this.service.fetchIssueDetails(issueNumber, repo, owner);
   }
 }
